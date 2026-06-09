@@ -85,10 +85,10 @@ public class AnimeThemesMapping(HttpClient httpClient, IMetadataService metadata
             string themeFolder = VfsShared.ResolveAnimeThemesFolderName();
             var roots = videoService
                 .GetAllVideoFiles()
-                .Select(v => v.ManagedFolder?.Path)
-                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Where(v => !string.IsNullOrWhiteSpace(v.ManagedFolder?.Path))
+                .Select(v => v.ManagedFolder!.Path!)
                 .Distinct()
-                .Select(p => Path.Combine(p!, themeFolder))
+                .Select(p => Path.Combine(p, themeFolder))
                 .Where(Directory.Exists)
                 .ToList();
             if (roots.Count == 0)

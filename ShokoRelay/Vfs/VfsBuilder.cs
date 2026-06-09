@@ -169,7 +169,7 @@ public class VfsBuilder(IMetadataService metadataService, VfsAssetLinker assetLi
         if (cleanRoot && !isFiltered)
         {
             s_logger.Info("VFS: Performing global root cleanup...");
-            List<string> allRoots = [.. (videoService.GetAllManagedFolders() ?? []).Select(f => f.Path).Where(p => !string.IsNullOrEmpty(p)).Distinct()];
+            List<string> allRoots = [.. (videoService.GetAllManagedFolders() ?? []).Where(f => !string.IsNullOrEmpty(f.Path)).Select(f => f.Path!).Distinct()];
 
             foreach (var root in allRoots)
             {
@@ -638,7 +638,7 @@ public class VfsBuilder(IMetadataService metadataService, VfsAssetLinker assetLi
     private void PruneSeries(string rootFolderName, IShokoSeries series, ConcurrentBag<string> errors)
     {
         int folderId = EnforceTmdbNumbering ? OverrideHelper.GetPrimary(series.ID, metadataService) : series.ID;
-        List<string> roots = [.. (videoService.GetAllManagedFolders() ?? []).Select(f => f.Path).Where(p => !string.IsNullOrEmpty(p)).Distinct()];
+        List<string> roots = [.. (videoService.GetAllManagedFolders() ?? []).Where(f => !string.IsNullOrEmpty(f.Path)).Select(f => f.Path!).Distinct()];
 
         foreach (var root in roots)
         {

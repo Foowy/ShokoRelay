@@ -291,8 +291,7 @@ public static class LogHelper
             {
                 string line = $"[{i.Status}] {i.Folder}";
                 return (i.Status == "ok" && !string.IsNullOrWhiteSpace(i.Slug)) ? $"{line} | {i.Slug}" : line;
-            })
-            .ToList();
+            });
 
         BuildReport(sb, "AnimeThemes: MP3 Batch Report", stats, "Item Details:", items);
     }

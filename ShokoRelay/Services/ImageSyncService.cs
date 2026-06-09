@@ -52,7 +52,6 @@ public class ImageSyncService(PlexClient plexClient, HttpClient httpClient, IMet
         var errorsList = new List<string>();
         var targets = plexClient.GetConfiguredTargets();
         var allSeries = metadataService.GetAllShokoSeries() ?? [];
-
         HashSet<int>? allowedSet = null;
         if (allowedSeriesIds != null)
         {
@@ -380,8 +379,8 @@ public class ImageSyncService(PlexClient plexClient, HttpClient httpClient, IMet
     private string? FindLocalEpisodeThumbnail(IShokoEpisode episode) =>
         (episode.VideoList ?? [])
             .SelectMany(v => v.Files ?? [])
-            .Select(f => f.Path)
-            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Where(f => !string.IsNullOrWhiteSpace(f.Path))
+            .Select(f => f.Path!)
             .Select(p => (Dir: Path.GetDirectoryName(p), Base: Path.GetFileNameWithoutExtension(p)))
             .Where(x => !string.IsNullOrEmpty(x.Dir) && Directory.Exists(x.Dir))
             .SelectMany(x =>

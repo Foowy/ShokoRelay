@@ -69,7 +69,7 @@ public class CollectionService(PlexClient plexClient, PlexCollections plexCollec
             if (targets.Count == 0)
                 return new BuildCollectionsResult(0, 0, 0, 0, 0, 0, 0, createdList, errorsList);
 
-            List<string> globalRoots = [.. (videoService.GetAllManagedFolders() ?? []).Select(f => f.Path).Where(p => !string.IsNullOrEmpty(p)).Distinct()];
+            List<string> globalRoots = [.. (videoService.GetAllManagedFolders() ?? []).Where(f => !string.IsNullOrEmpty(f.Path)).Select(f => f.Path!).Distinct()];
 
             // Execute pre-cleanup pruning of old posters, arts, logos, and square images if configured and enabled
             if (clean && !string.IsNullOrWhiteSpace(Settings.Advanced.PlexMetadataPath))

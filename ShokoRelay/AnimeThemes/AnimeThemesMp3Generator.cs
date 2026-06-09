@@ -114,8 +114,8 @@ public class AnimeThemesMp3Generator(HttpClient httpClient, IMetadataService met
         try
         {
             var roots = (videoService.GetAllManagedFolders() ?? [])
-                .Select(mf => mf.Path?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-                .Where(p => !string.IsNullOrWhiteSpace(p) && Directory.Exists(p))
+                .Where(mf => !string.IsNullOrWhiteSpace(mf.Path) && Directory.Exists(mf.Path))
+                .Select(mf => mf.Path!.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
                 .Distinct(VfsShared.PathComparer)
                 .ToList();
             _themeMp3Cache = new HashSet<string>(

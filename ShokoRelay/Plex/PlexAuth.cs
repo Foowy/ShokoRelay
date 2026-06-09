@@ -232,7 +232,7 @@ public class PlexAuth(HttpClient httpClient, PlexAuthConfig config)
                 // Fallback: If preferred URI failed, try other endpoints
                 if (!ok && devices.FirstOrDefault(d => string.Equals(d.ClientIdentifier, srv.Id, StringComparison.OrdinalIgnoreCase)) is { } dev && dev.Connections != null)
                 {
-                    var conns = srv.HttpsRequired ? dev.Connections.Where(c => c.Uri?.StartsWith("https") == true) : dev.Connections;
+                    var conns = srv.HttpsRequired ? dev.Connections.Where(c => c.Uri?.StartsWith("https", StringComparison.Ordinal) == true) : dev.Connections;
                     foreach (var conn in conns)
                     {
                         if (string.IsNullOrEmpty(conn.Uri) || string.Equals(conn.Uri, srv.PreferredUri, StringComparison.OrdinalIgnoreCase))

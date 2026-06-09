@@ -54,7 +54,7 @@ public static class TagHelper
             return [];
         var userBlacklist = Settings.TagBlacklist.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
         var sourceSetting = Settings.TagSources;
-        var shokoNames = shokoTags.Select(t => t.Name).Where(n => !string.IsNullOrWhiteSpace(n)).Cast<string>();
+        var shokoNames = shokoTags.Where(t => !string.IsNullOrWhiteSpace(t.Name)).Select(t => t.Name!);
 
         if (sourceSetting == TagSources.UserOnly)
             return [.. FilterAndFormat(shokoNames, userBlacklist)];

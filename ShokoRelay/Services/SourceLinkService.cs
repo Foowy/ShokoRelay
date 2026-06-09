@@ -16,7 +16,7 @@ public class SourceLinkService(IVideoService videoService)
     /// <returns>The number of links created or removed.</returns>
     public async Task<int> ProcessLinksAsync(string mapFile, bool purgeLinks = false)
     {
-        var roots = (videoService.GetAllManagedFolders() ?? []).Select(mf => mf.Path).Where(p => !string.IsNullOrWhiteSpace(p) && Directory.Exists(p)).Distinct().ToList();
+        var roots = (videoService.GetAllManagedFolders() ?? []).Where(mf => !string.IsNullOrWhiteSpace(mf.Path) && Directory.Exists(mf.Path)).Select(mf => mf.Path!).Distinct().ToList();
         int count = 0;
 
         if (purgeLinks)
