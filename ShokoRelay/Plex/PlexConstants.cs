@@ -141,13 +141,16 @@ namespace ShokoRelay.Plex
             public static readonly FrozenSet<string> SeriesMetadata = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".mp3", ".nfo" }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
             /// <summary>Supported subtitle file extensions.</summary>
-            public static readonly FrozenSet<string> SubtitleExtensions = ((string[])[".srt", ".smi", ".ssa", ".ass", ".vtt"]).ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+            public static readonly FrozenSet<string> SubtitleExtensions = ((string[])[".ass", ".idx", ".smi", ".srt", ".ssa", ".sub", ".sup", ".vtt"]).ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
             /// <summary>Subtitle modifiers that are ignored during language remapping.</summary>
-            public static readonly FrozenSet<string> SubtitleModifiers = ((string[])["default", "forced", "sdh", "cc"]).ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+            public static readonly FrozenSet<string> SubtitleModifiers = ((string[])["cc", "default", "forced", "sdh"]).ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
-            /// <summary>Episode level sidecar file extensions including subtitles and NFO metadata files.</summary>
-            public static readonly FrozenSet<string> EpisodeMetadata = ((string[])[.. SubtitleExtensions, ".nfo"]).ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+            /// <summary>Episode level sidecar file extensions including subtitles, chapter definitions, and NFO metadata files.</summary>
+            public static readonly FrozenSet<string> EpisodeMetadata = ((string[])[.. SubtitleExtensions, ".nfo", ".xml", ".chp"]).ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+
+            /// <summary>Directory suffixes representing external attachment folders.</summary>
+            public static readonly FrozenSet<string> AttachmentFolderSuffixes = ((string[])["_attach", "_attachments"]).ToFrozenSet(StringComparer.OrdinalIgnoreCase);
         }
 
         /// <summary>Represents a configuration for a specific collection artwork type.</summary>

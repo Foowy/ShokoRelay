@@ -94,6 +94,9 @@ public sealed class VfsBuildSession
     /// <summary>Caches directory enumeration results for episode-level subtitle and metadata sidecar files.</summary>
     public ConcurrentDictionary<string, Lazy<string[]>> SubtitleFileCache { get; } = new(VfsShared.PathComparer);
 
+    /// <summary>Caches directory enumeration results for attachment folders to minimize disk I/O.</summary>
+    public ConcurrentDictionary<string, Lazy<string[]>> AttachmentDirCache { get; } = new(VfsShared.PathComparer);
+
     /// <summary>Caches directory enumeration results for series-level metadata files like posters and backdrops.</summary>
     public ConcurrentDictionary<string, Lazy<string[]>> MetadataFileCache { get; } = new(VfsShared.PathComparer);
 

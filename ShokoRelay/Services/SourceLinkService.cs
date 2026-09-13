@@ -103,9 +103,10 @@ public class SourceLinkService(IVideoService videoService)
                     {
                         string name = Path.GetFileName(entry);
                         bool isDir = Directory.Exists(entry);
+                        bool isAttachDir = isDir && name.StartsWith(srcBase, cmp) && PlexConstants.LocalMediaAssets.AttachmentFolderSuffixes.Contains(name[srcBase.Length..]);
 
                         // Logic: Filter for the primary video, any file starting with the base name, or the designated attachments folder
-                        if (!name.Equals(Path.GetFileName(fullSrc), cmp) && !(!isDir && name.StartsWith(srcBase, cmp)) && !(isDir && name.Equals(srcBase + "_attachments", StringComparison.OrdinalIgnoreCase)))
+                        if (!name.Equals(Path.GetFileName(fullSrc), cmp) && !(!isDir && name.StartsWith(srcBase, cmp)) && !isAttachDir)
                             continue;
 
                         string suffix = isDir ? "_attach" : name[srcBase.Length..];

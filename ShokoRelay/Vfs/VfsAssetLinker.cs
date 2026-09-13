@@ -62,7 +62,8 @@ public class VfsAssetLinker(IVideoService videoService)
     /// <param name="sourceDir">The physical directory containing the sidecars.</param>
     /// <param name="destBase">The new base filename in the VFS.</param>
     /// <param name="destDir">The target VFS season directory.</param>
-    /// <param name="cache">Build-session cache for directory enumeration results.</param>
+    /// <param name="cache">Build-session cache for file enumeration results.</param>
+    /// <param name="dirCache">Build-session cache for directory enumeration results.</param>
     /// <param name="planned">Reference to the planned links counter.</param>
     /// <param name="skipped">Reference to the skipped links counter.</param>
     /// <param name="errors">List of encountered error messages.</param>
@@ -75,6 +76,7 @@ public class VfsAssetLinker(IVideoService videoService)
         string destBase,
         string destDir,
         ConcurrentDictionary<string, Lazy<string[]>> cache,
+        ConcurrentDictionary<string, Lazy<string[]>> dirCache,
         ref int planned,
         ref int skipped,
         List<string> errors,
@@ -112,6 +114,7 @@ public class VfsAssetLinker(IVideoService videoService)
                     errors.Add($"Metadata sidecar link failed: {sub}");
                 }
             }
+            LinkAttachmentFolder(sourceDir, originalBase, destDir, destBase, dirCache, ref planned, ref skipped, errors, ref created, onLink, skipExistenceCheck);
             return;
         }
 
@@ -119,12 +122,17 @@ public class VfsAssetLinker(IVideoService videoService)
         foreach (var sub in candidates)
         {
             string name = Path.GetFileName(sub);
-            if (!name.StartsWith(originalBase, StringComparison.OrdinalIgnoreCase) || (name.Length > originalBase.Length && char.IsLetterOrDigit(name[originalBase.Length])) || !File.Exists(sub))
+            if (!name.StartsWith(originalBase, StringComparison.OrdinalIgnoreCase) || (name.Length > originalBase.Length && char.IsLetterOrDigit(name[originalBase.Length])))
                 continue;
 
             string ext = Path.GetExtension(sub);
+
+            // Exclude unavailable subtitle sources before they can win a destination collision
+            if (PlexConstants.LocalMediaAssets.SubtitleExtensions.Contains(ext) && !File.Exists(sub))
+                continue;
+
             string suffix = name[originalBase.Length..];
-            var (mappedSuffix, priority) = suffix.StartsWith('.') && PlexConstants.LocalMediaAssets.SubtitleExtensions.Contains(ext) ? RenameSubtitleSuffix(suffix, mappings) : (suffix, -1);
+            var (mappedSuffix, priority) = PlexConstants.LocalMediaAssets.SubtitleExtensions.Contains(ext) ? RenameSubtitleSuffix(suffix, mappings) : (suffix, -1);
 
             pendingLinks.Add((sub, destBase + mappedSuffix, priority));
         }
@@ -157,6 +165,69 @@ public class VfsAssetLinker(IVideoService videoService)
             {
                 skipped++;
                 errors.Add($"Metadata sidecar link failed: {source}");
+            }
+        }
+
+        LinkAttachmentFolder(sourceDir, originalBase, destDir, destBase, dirCache, ref planned, ref skipped, errors, ref created, onLink, skipExistenceCheck);
+    }
+
+    /// <summary>Links episode-level attachment directories into the VFS.</summary>
+    /// <param name="sourceDir">The physical directory containing the attachment folder.</param>
+    /// <param name="originalBase">Original video file base name.</param>
+    /// <param name="destDir">The target VFS season or movie directory.</param>
+    /// <param name="destBase">The new base filename in the VFS.</param>
+    /// <param name="dirCache">Build-session cache for directory enumeration results.</param>
+    /// <param name="planned">Reference to the planned links counter.</param>
+    /// <param name="skipped">Reference to the skipped links counter.</param>
+    /// <param name="errors">List of encountered error messages.</param>
+    /// <param name="created">Reference to the successful links created counter.</param>
+    /// <param name="onLink">Optional callback to record the created link for the VFS Browser blueprint.</param>
+    /// <param name="skipExistenceCheck">If true, bypasses the filesystem check and writes the link directly.</param>
+    private static void LinkAttachmentFolder(
+        string sourceDir,
+        string originalBase,
+        string destDir,
+        string destBase,
+        ConcurrentDictionary<string, Lazy<string[]>> dirCache,
+        ref int planned,
+        ref int skipped,
+        List<string> errors,
+        ref int created,
+        Action<string, string?>? onLink = null,
+        bool skipExistenceCheck = false
+    )
+    {
+        var subDirs = dirCache.GetOrAdd(sourceDir, d => new Lazy<string[]>(() => [.. Directory.EnumerateDirectories(d)])).Value;
+        string? attachSrcDir = subDirs.FirstOrDefault(d =>
+            Path.GetFileName(d) is var name && name.StartsWith(originalBase, StringComparison.OrdinalIgnoreCase) && PlexConstants.LocalMediaAssets.AttachmentFolderSuffixes.Contains(name[originalBase.Length..])
+        );
+
+        if (attachSrcDir == null)
+            return;
+
+        string destAttachDir = Path.Combine(destDir, destBase + "_attach");
+        if (!Settings.Advanced.DisableVfsGeneration)
+            Directory.CreateDirectory(destAttachDir);
+
+        foreach (var file in Directory.EnumerateFiles(attachSrcDir, "*", SearchOption.AllDirectories))
+        {
+            string rel = Path.GetRelativePath(attachSrcDir, file);
+            string destFile = Path.Combine(destAttachDir, rel);
+            string? subDir = Path.GetDirectoryName(destFile);
+
+            if (!Settings.Advanced.DisableVfsGeneration && !string.IsNullOrEmpty(subDir))
+                Directory.CreateDirectory(subDir);
+
+            if (VfsShared.TryCreateLink(file, destFile, s_logger, skipExistenceCheck: skipExistenceCheck))
+            {
+                planned++;
+                created++;
+                onLink?.Invoke(Path.Combine(destBase + "_attach", rel), file);
+            }
+            else
+            {
+                skipped++;
+                errors.Add($"Attachment link failed: {file}");
             }
         }
     }
