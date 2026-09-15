@@ -15,6 +15,34 @@
   "image_url": "https://raw.githubusercontent.com/natyusha/ShokoRelay/master/ShokoRelay/Assets/shoko-relay-logo.png",
   "releases": [
     {
+      "version": "0.17.5",
+      "tag": "v0.17.5",
+      "source_revision": "f10443fc3c5903eb93f9918785ccad6b36f0e450",
+      "released_at": "2026-09-15T13:16:49Z",
+      "channel": "Dev",
+      "release_notes": "**Changes:**\r\n- Added configurable `SubtitleLanguageMappings` to translate non-standard subtitle language codes into Plex compatible tags in the VFS.\r\n- Supported subtitle token remapping across dot separators as well as leading underscore and hyphen subgroup prefixes (e.g., `_SubGroup.chs.ass` → `_SubGroup.zh-Hans.ass`) while preserving Plex modifiers (`.default`, `.forced`, `.sdh`, `.cc`).\r\n- Added support for external VobSub (`.idx`, `.sub`) and Blu-ray PGS (`.sup`) subtitles with language remapping compatibility.\r\n- Added support for external Matroska (`.xml`) and OGM (`.chp`) chapter files as episode-level sidecar metadata.\r\n- Added automatic VFS mirroring for episode-level font and attachment folders (`_attach` / `_attachments`) with session directory caching to avoid unnecessary disk I/O.\r\n- Optimized VFS building by removing dead versioning calculations, redundant LINQ projections, and unneeded symlink target resolutions.\r\n- Updated `Shoko.Abstractions` to `6.0.0-alpha.87`.\r\n\r\n**New Contributors:**\r\n* @leo-maxwell made their first contribution in https://github.com/natyusha/ShokoRelay/pull/12\r\n\r\n**Full Changelog**: https://github.com/natyusha/ShokoRelay/compare/v0.17.4...v0.17.5",
+      "archives": [
+        {
+          "runtime": "linux-arm64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/natyusha/ShokoRelay/releases/download/v0.17.5/ShokoRelay-v0.17.5-dev_linux-arm64.zip",
+          "checksum": "sha256:57ea63d9e86086e86d2217bf4725960bbb908deac51582e00bb674c2b17e61d4"
+        },
+        {
+          "runtime": "linux-x64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/natyusha/ShokoRelay/releases/download/v0.17.5/ShokoRelay-v0.17.5-dev_linux-x64.zip",
+          "checksum": "sha256:b7f8911cbf2a05a86cf30119d8c501195a2817e7eac21546e41c0857b29b075d"
+        },
+        {
+          "runtime": "win-x64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/natyusha/ShokoRelay/releases/download/v0.17.5/ShokoRelay-v0.17.5-dev_win-x64.zip",
+          "checksum": "sha256:0b1003a310196517d3f4e16cc9f4f41d3d9a6f4fada646c269a5558350fe5ecf"
+        }
+      ]
+    },
+    {
       "version": "0.17.4",
       "tag": "v0.17.4",
       "source_revision": "2be163c46a8ce723e9ab889a8f1c4be7e4cdca67",
