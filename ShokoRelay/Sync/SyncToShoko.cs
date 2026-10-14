@@ -217,7 +217,7 @@ public class SyncToShoko(
                                 var update = videoData != null ? new VideoUserDataUpdate(videoData) : new VideoUserDataUpdate();
                                 update.ProgressPosition = TimeSpan.FromMilliseconds(item.ViewOffset!.Value);
                                 update.LastUpdatedAt = DateTime.UtcNow;
-                                await userDataService.SaveVideoUserData(video, defaultUser, update).ConfigureAwait(false);
+                                await userDataService.SaveVideoUserData(video, defaultUser, update, VideoUserDataSaveReason.PlaybackProgress).ConfigureAwait(false);
                             }
                         }
                         appliedIds.Add(ep.LocalID);

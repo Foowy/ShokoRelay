@@ -503,7 +503,7 @@ public class PlexController(
                     var update = videoData != null ? new VideoUserDataUpdate(videoData) : new VideoUserDataUpdate();
                     update.ProgressPosition = TimeSpan.FromMilliseconds(evt.Metadata.ViewOffset.Value);
                     update.LastUpdatedAt = DateTime.UtcNow;
-                    await userDataService.SaveVideoUserData(video, user, update).ConfigureAwait(false);
+                    await userDataService.SaveVideoUserData(video, user, update, VideoUserDataSaveReason.PlaybackProgress).ConfigureAwait(false);
                 }
                 Logger.LogInformation(
                     "Plex: Progress updated -> user='{User}', series='{Series}', {Type}='{Item}', offset={Offset}",
