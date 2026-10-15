@@ -16,6 +16,34 @@
   "icon_url": "https://raw.githubusercontent.com/natyusha/ShokoRelay/master/ShokoRelay/Assets/shoko-relay-icon.png",
   "releases": [
     {
+      "version": "0.20.2",
+      "tag": "v0.20.2",
+      "source_revision": "70212574efc2e34135351eddadaed6b64ca36aca",
+      "released_at": "2026-10-15T19:43:01Z",
+      "channel": "Dev",
+      "release_notes": "Following Plex Server changes due to [CVE-2026-96655](https://github.com/advisories/GHSA-9x88-w2p7-56vh) cast & crew images must now be sourced from publicly available URLs rather than from Shoko. Due to this change TMDB is now the preferred provider for these images by default (to avoid strict AniDB HTTP limits). Therefore, it is highly recommended that TMDB cast information/images are enabled in Shoko Server.\r\n\r\n**Changes:**\r\n- Enabled forceRemote for cast and crew images in CastHelper to bypass Plex's caller-supplied URL restrictions\r\n- Added TmdbCastImages setting to RelayConfig to allow preferring TMDB images for cast and crew\r\n- Implemented robust name matching hierarchy (OriginalName, Name, Flipped Name, and AlternativeNames) in CastHelper\r\n- Applied deduplication and TMDB image resolution to both cast and crew entries within GetCastAndCrew\r\n- Implemented CleanCrewRole helper to strip department prefixes from crew job titles to prevent truncation in Plex UI\r\n- Added VideoUserDataSaveReason.PlaybackProgress for episode playback tracking\r\n- Bumped Shoko.Abstractions to v6.0.0-alpha.107\r\n\r\n**Full Changelog**: https://github.com/natyusha/ShokoRelay/compare/v0.20.1...v0.20.2",
+      "archives": [
+        {
+          "runtime": "linux-arm64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/natyusha/ShokoRelay/releases/download/v0.20.2/ShokoRelay-v0.20.2-dev_linux-arm64.zip",
+          "checksum": "sha256:2ed8459630631f8b5e3d598f35ef376aa3b1923821f3973c9f0067139dc98476"
+        },
+        {
+          "runtime": "linux-x64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/natyusha/ShokoRelay/releases/download/v0.20.2/ShokoRelay-v0.20.2-dev_linux-x64.zip",
+          "checksum": "sha256:784b61158c3a4ab50646f953d4617e119b098981d24c14fd49f73f4fac5e0fd6"
+        },
+        {
+          "runtime": "win-x64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/natyusha/ShokoRelay/releases/download/v0.20.2/ShokoRelay-v0.20.2-dev_win-x64.zip",
+          "checksum": "sha256:f125118774adad8b751fef96ecd788737b509f8be546fda4ebd099870de37509"
+        }
+      ]
+    },
+    {
       "version": "0.20.1",
       "tag": "v0.20.1",
       "source_revision": "719514a696c2d5a3858df8ebb14e608fc7e5f64c",
