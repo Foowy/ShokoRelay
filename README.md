@@ -76,14 +76,25 @@ Enable the following options in Shoko to ensure that Plex has at least one sourc
 - `Settings > AniDB > Download Options`
   - [x] Character Images
   - [x] Creator Images
-- `Settings > TMDB > TMDB Options`
+- `Settings > Metadata > TMDB`
+  - `Providers`
+    - [x] Series
+    - [x] Seasons
+    - [x] Episodes
+    - [x] Movies
+    - [x] Creators
+    - [x] Studios
+    - [x] Networks
+  - Auto-Linker: TMDB
   - [x] Auto Link
   - [x] Auto Link Restricted
-- `Settings > TMDB > TMDB Download Options`
-  - [x] Download Alternate Ordering
+  - `TMDB Settings`
+    - [x] Auto Download Alternate Ordering
+  - [x] Use Own Image Options
   - [x] Download Backdrops
   - [x] Download Posters
   - [x] Download Logos
+  - [x] Download Staff Images
   - [x] Download Networks (available in `settings-server.json`)
 - `Settings > Collection > Relation Options`
   - [x] Auto Group Series
