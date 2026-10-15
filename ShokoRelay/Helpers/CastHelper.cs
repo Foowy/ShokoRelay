@@ -28,39 +28,127 @@ public static class CastHelper
     public static object[] GetCastAndCrew(IWithCastAndCrew item)
     {
         int order = 1;
+        var allCast = item.Cast?.ToList() ?? [];
+        var tmdbCast = allCast.Where(c => c.Creator?.ID.Source == MetadataSource.TMDB).ToList();
+        var anidbCast = allCast.Where(c => c.Creator == null || c.Creator.ID.Source != MetadataSource.TMDB).ToList();
 
-        var cast =
-            item.Cast?.Select(c => new
+        var matchedTmdbEntries = new HashSet<ICast>();
+        var finalCast = new List<object>();
+
+        foreach (var c in anidbCast)
+        {
+            string? tag = GetName(c.Creator, c.Name);
+            string? role = c.Character?.Name ?? c.Name;
+
+            // Filter out non-person entries (characters, vehicles, mecha, etc.) where the actor name matches the role name.
+            if (string.Equals(tag, role, StringComparison.Ordinal))
+                continue;
+
+            var match = FindMatchingTmdbCast(c, tmdbCast);
+            var thumbImg = c.Creator?.PrimaryImage;
+
+            if (match != null)
+            {
+                matchedTmdbEntries.Add(match);
+                if (Settings.TmdbCastImages && match.Creator?.PrimaryImage != null)
+                    thumbImg = match.Creator.PrimaryImage;
+            }
+
+            finalCast.Add(
+                new
                 {
                     order = order++,
-                    tag = GetName(c.Creator, c.Name),
-                    role = c.Character?.Name ?? c.Name,
+                    tag,
+                    role,
+                    thumb = thumbImg != null ? ImageHelper.GetImageUrl(thumbImg, forceRemote: true) : null,
+                }
+            );
+        }
+
+        foreach (var c in tmdbCast)
+        {
+            if (matchedTmdbEntries.Contains(c))
+                continue;
+
+            string? tag = GetName(c.Creator, c.Name);
+            string? role = c.Character?.Name ?? c.Name;
+
+            if (string.Equals(tag, role, StringComparison.Ordinal))
+                continue;
+
+            finalCast.Add(
+                new
+                {
+                    order = order++,
+                    tag,
+                    role,
                     thumb = c.Creator?.PrimaryImage is { } img ? ImageHelper.GetImageUrl(img, forceRemote: true) : null,
-                })
-                // Filter out non-person entries (characters, vehicles, mecha, etc.) where the actor name matches the role name.
-                .Where(c => !string.Equals(c.tag, c.role, StringComparison.Ordinal))
-                .Cast<object>()
-                .ToArray()
-            ?? [];
+                }
+            );
+        }
 
         if (!Settings.CrewListings)
-            return cast;
+            return [.. finalCast];
 
-        var crew =
-            item.Crew?.Select(c =>
-                    (object)
-                        new
-                        {
-                            order = order++,
-                            tag = GetName(c.Creator, c.Name),
-                            role = c.RoleType == CrewRoleType.Music ? "Composer" : c.Name,
-                            thumb = c.Creator?.PrimaryImage is { } img ? ImageHelper.GetImageUrl(img, forceRemote: true) : null,
-                        }
-                )
-                .ToArray()
-            ?? [];
+        var allCrew = item.Crew?.ToList() ?? [];
+        var tmdbCrew = allCrew.Where(c => c.Creator?.ID.Source == MetadataSource.TMDB).ToList();
+        var anidbCrew = allCrew.Where(c => c.Creator == null || c.Creator.ID.Source != MetadataSource.TMDB).ToList();
 
-        return [.. cast, .. crew];
+        var matchedTmdbCrewEntries = new HashSet<ICrew>();
+        var finalCrew = new List<object>();
+
+        foreach (var c in anidbCrew)
+        {
+            string? tag = GetName(c.Creator, c.Name);
+            string role = c.RoleType == CrewRoleType.Music ? "Composer" : (c.Name ?? "");
+
+            if (string.Equals(tag, role, StringComparison.Ordinal))
+                continue;
+
+            var match = FindMatchingTmdbCrew(c, tmdbCrew);
+            var thumbImg = c.Creator?.PrimaryImage;
+
+            if (match != null)
+            {
+                matchedTmdbCrewEntries.Add(match);
+                if (Settings.TmdbCastImages && match.Creator?.PrimaryImage != null)
+                    thumbImg = match.Creator.PrimaryImage;
+            }
+
+            finalCrew.Add(
+                new
+                {
+                    order = order++,
+                    tag,
+                    role,
+                    thumb = thumbImg != null ? ImageHelper.GetImageUrl(thumbImg, forceRemote: true) : null,
+                }
+            );
+        }
+
+        foreach (var c in tmdbCrew)
+        {
+            if (matchedTmdbCrewEntries.Contains(c))
+                continue;
+
+            string? tag = GetName(c.Creator, c.Name);
+            string role = c.RoleType == CrewRoleType.Music ? "Composer" : (c.Name ?? "");
+
+            if (string.Equals(tag, role, StringComparison.Ordinal))
+                continue;
+
+            finalCrew.Add(
+                new
+                {
+                    order = order++,
+                    tag,
+                    role,
+                    thumb = c.Creator?.PrimaryImage is { } img ? ImageHelper.GetImageUrl(img, forceRemote: true) : null,
+                }
+            );
+        }
+
+        return [.. finalCast, .. finalCrew];
     }
 
     /// <summary>Return director credits for the given item.</summary>
@@ -75,6 +163,7 @@ public static class CastHelper
         item.Crew?.Where(c => c.RoleType is CrewRoleType.SeriesComposer or CrewRoleType.SourceWork)
             .Select(c => GetName(c.Creator, c.Name))
             .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(name => (object)new { tag = name })
             .ToArray()
         ?? [];
@@ -102,14 +191,118 @@ public static class CastHelper
     /// <param name="creator">The creator metadata object.</param>
     /// <param name="fallback">The fallback name.</param>
     /// <returns>The resolved name string.</returns>
-    private static string? GetName(ICreator? creator, string fallback) => creator?.Name ?? fallback;
+    private static string? GetName(ICreator? creator, string? fallback) => creator?.Name ?? fallback;
 
     /// <summary>Filters the crew by a specific role type and returns a formatted array of tags.</summary>
     /// <param name="item">The media item containing cast and crew.</param>
     /// <param name="roleType">The role type to filter for.</param>
     /// <returns>An array of anonymous objects containing crew tags.</returns>
     private static object[] FilterCrew(IWithCastAndCrew item, CrewRoleType roleType) =>
-        item.Crew?.Where(c => c.RoleType == roleType).Select(c => GetName(c.Creator, c.Name)).Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => (object)new { tag = name }).ToArray() ?? [];
+        item.Crew?.Where(c => c.RoleType == roleType)
+            .Select(c => GetName(c.Creator, c.Name))
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(name => (object)new { tag = name })
+            .ToArray()
+        ?? [];
+
+    /// <summary>Finds a matching TMDB cast entry for an AniDB cast entry based on name variations.</summary>
+    /// <param name="anidbCast">The AniDB cast entry.</param>
+    /// <param name="tmdbCastList">The list of available TMDB cast entries.</param>
+    /// <returns>The matched TMDB cast entry or null.</returns>
+    private static ICast? FindMatchingTmdbCast(ICast anidbCast, IReadOnlyList<ICast> tmdbCastList)
+    {
+        string? originalName = anidbCast.Creator?.OriginalName;
+        string? name = anidbCast.Creator?.Name ?? anidbCast.Name;
+        string? flippedName = null;
+
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2)
+                flippedName = $"{parts[1]} {parts[0]}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(originalName))
+            if (tmdbCastList.FirstOrDefault(t => string.Equals(t.Creator?.OriginalName, originalName, StringComparison.OrdinalIgnoreCase)) is { } match1)
+                return match1;
+
+        if (!string.IsNullOrWhiteSpace(name))
+            if (tmdbCastList.FirstOrDefault(t => string.Equals(t.Creator?.Name ?? t.Name, name, StringComparison.OrdinalIgnoreCase)) is { } match2)
+                return match2;
+
+        if (!string.IsNullOrWhiteSpace(flippedName))
+            if (tmdbCastList.FirstOrDefault(t => string.Equals(t.Creator?.Name ?? t.Name, flippedName, StringComparison.OrdinalIgnoreCase)) is { } match3)
+                return match3;
+
+        if (anidbCast.Creator?.AlternativeNames is { Count: > 0 } altNames)
+            foreach (var alt in altNames)
+            {
+                if (string.IsNullOrWhiteSpace(alt.Value))
+                    continue;
+                if (
+                    tmdbCastList.FirstOrDefault(t =>
+                        string.Equals(t.Creator?.Name ?? t.Name, alt.Value, StringComparison.OrdinalIgnoreCase)
+                        || (t.Creator?.AlternativeNames != null && t.Creator.AlternativeNames.Any(a => string.Equals(a.Value, alt.Value, StringComparison.OrdinalIgnoreCase)))
+                    ) is
+                    { } match4
+                )
+                    return match4;
+            }
+
+        return null;
+    }
+
+    /// <summary>Finds a matching TMDB crew entry for an AniDB crew entry based on role and name variations.</summary>
+    /// <param name="anidbCrew">The AniDB crew entry.</param>
+    /// <param name="tmdbCrewList">The list of available TMDB crew entries.</param>
+    /// <returns>The matched TMDB crew entry or null.</returns>
+    private static ICrew? FindMatchingTmdbCrew(ICrew anidbCrew, IReadOnlyList<ICrew> tmdbCrewList)
+    {
+        var sameRoleTmdb = tmdbCrewList.Where(t => t.RoleType == anidbCrew.RoleType).ToList();
+        if (sameRoleTmdb.Count == 0)
+            return null;
+
+        string? originalName = anidbCrew.Creator?.OriginalName;
+        string? name = anidbCrew.Creator?.Name ?? anidbCrew.Name;
+        string? flippedName = null;
+
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2)
+                flippedName = $"{parts[1]} {parts[0]}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(originalName))
+            if (sameRoleTmdb.FirstOrDefault(t => string.Equals(t.Creator?.OriginalName, originalName, StringComparison.OrdinalIgnoreCase)) is { } match1)
+                return match1;
+
+        if (!string.IsNullOrWhiteSpace(name))
+            if (sameRoleTmdb.FirstOrDefault(t => string.Equals(t.Creator?.Name ?? t.Name, name, StringComparison.OrdinalIgnoreCase)) is { } match2)
+                return match2;
+
+        if (!string.IsNullOrWhiteSpace(flippedName))
+            if (sameRoleTmdb.FirstOrDefault(t => string.Equals(t.Creator?.Name ?? t.Name, flippedName, StringComparison.OrdinalIgnoreCase)) is { } match3)
+                return match3;
+
+        if (anidbCrew.Creator?.AlternativeNames is { Count: > 0 } altNames)
+            foreach (var alt in altNames)
+            {
+                if (string.IsNullOrWhiteSpace(alt.Value))
+                    continue;
+                if (
+                    sameRoleTmdb.FirstOrDefault(t =>
+                        string.Equals(t.Creator?.Name ?? t.Name, alt.Value, StringComparison.OrdinalIgnoreCase)
+                        || (t.Creator?.AlternativeNames != null && t.Creator.AlternativeNames.Any(a => string.Equals(a.Value, alt.Value, StringComparison.OrdinalIgnoreCase)))
+                    ) is
+                    { } match4
+                )
+                    return match4;
+            }
+
+        return null;
+    }
 
     #endregion
 }
