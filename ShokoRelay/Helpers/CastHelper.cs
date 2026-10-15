@@ -160,7 +160,7 @@ public static class CastHelper
     /// <param name="item">Source item.</param>
     /// <returns>An array of anonymous objects containing writer names.</returns>
     public static object[] GetWriters(IWithCastAndCrew item) =>
-        item.Crew?.Where(c => c.RoleType is CrewRoleType.SeriesComposer or CrewRoleType.SourceWork)
+        DeduplicateCrew(item.Crew?.Where(c => c.RoleType is CrewRoleType.SeriesComposer or CrewRoleType.SourceWork))
             .Select(c => GetName(c.Creator, c.Name))
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -198,13 +198,50 @@ public static class CastHelper
     /// <param name="roleType">The role type to filter for.</param>
     /// <returns>An array of anonymous objects containing crew tags.</returns>
     private static object[] FilterCrew(IWithCastAndCrew item, CrewRoleType roleType) =>
-        item.Crew?.Where(c => c.RoleType == roleType)
+        DeduplicateCrew(item.Crew?.Where(c => c.RoleType == roleType))
             .Select(c => GetName(c.Creator, c.Name))
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(name => (object)new { tag = name })
             .ToArray()
         ?? [];
+
+    /// <summary>Deduplicates a collection of crew members per role type, preferring AniDB entries over matching TMDB entries.</summary>
+    /// <param name="crewItems">The raw collection of crew items.</param>
+    /// <returns>A deduplicated collection of crew items.</returns>
+    private static IEnumerable<ICrew> DeduplicateCrew(IEnumerable<ICrew>? crewItems)
+    {
+        if (crewItems == null)
+            return [];
+
+        var grouped = crewItems.GroupBy(c => c.RoleType);
+        var result = new List<ICrew>();
+
+        foreach (var group in grouped)
+        {
+            var allCrew = group.ToList();
+            var tmdbCrew = allCrew.Where(c => c.Creator?.ID.Source == MetadataSource.TMDB).ToList();
+            var anidbCrew = allCrew.Where(c => c.Creator == null || c.Creator.ID.Source != MetadataSource.TMDB).ToList();
+
+            var matchedTmdbEntries = new HashSet<ICrew>();
+
+            foreach (var c in anidbCrew)
+            {
+                result.Add(c);
+                var match = FindMatchingTmdbCrew(c, tmdbCrew);
+                if (match != null)
+                    matchedTmdbEntries.Add(match);
+            }
+
+            foreach (var c in tmdbCrew)
+            {
+                if (!matchedTmdbEntries.Contains(c))
+                    result.Add(c);
+            }
+        }
+
+        return result;
+    }
 
     /// <summary>Finds a matching TMDB cast entry for an AniDB cast entry based on name variations.</summary>
     /// <param name="anidbCast">The AniDB cast entry.</param>
