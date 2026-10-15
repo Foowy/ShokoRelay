@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Newtonsoft.Json;
 using Shoko.Abstractions.Metadata;
 using Shoko.Abstractions.Metadata.Containers;
@@ -20,6 +21,16 @@ public sealed class TagItem
 /// <summary>Helper utilities for generating cast, crew and studio tag information suitable for Plex metadata responses.</summary>
 public static class CastHelper
 {
+    #region Static Configuration
+
+    // csharpier-ignore
+    /// <summary>TMDB crew departments used to strip category prefixes from role names.</summary>
+    private static readonly FrozenSet<string> s_tmdbDepartments = new[] {
+        "Production", "Costume & Make-Up", "Lighting", "Actors", "Crew", "Directing", "Writing", "Editing", "Sound", "Visual Effects", "Camera", "Art"
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+
+    #endregion
+
     #region Cast and Crew Logic
 
     /// <summary>Return an array of objects representing cast (and optionally crew) for the specified media item. The crew portion is included based on the <c>CrewListings</c> setting.</summary>
@@ -100,7 +111,7 @@ public static class CastHelper
         foreach (var c in anidbCrew)
         {
             string? tag = GetName(c.Creator, c.Name);
-            string role = c.RoleType == CrewRoleType.Music ? "Composer" : (c.Name ?? "");
+            string role = c.RoleType == CrewRoleType.Music ? "Composer" : CleanCrewRole(c.Name);
 
             if (string.Equals(tag, role, StringComparison.Ordinal))
                 continue;
@@ -132,7 +143,7 @@ public static class CastHelper
                 continue;
 
             string? tag = GetName(c.Creator, c.Name);
-            string role = c.RoleType == CrewRoleType.Music ? "Composer" : (c.Name ?? "");
+            string role = c.RoleType == CrewRoleType.Music ? "Composer" : CleanCrewRole(c.Name);
 
             if (string.Equals(tag, role, StringComparison.Ordinal))
                 continue;
@@ -192,6 +203,17 @@ public static class CastHelper
     /// <param name="fallback">The fallback name.</param>
     /// <returns>The resolved name string.</returns>
     private static string? GetName(ICreator? creator, string? fallback) => creator?.Name ?? fallback;
+
+    /// <summary>Strips department category prefixes from TMDB crew role names.</summary>
+    /// <param name="role">The raw crew role string.</param>
+    /// <returns>The cleaned role string.</returns>
+    private static string CleanCrewRole(string? role)
+    {
+        if (string.IsNullOrWhiteSpace(role))
+            return "";
+        int commaIdx = role.IndexOf(',');
+        return commaIdx > 0 && s_tmdbDepartments.Contains(role[..commaIdx].Trim()) ? role[(commaIdx + 1)..].Trim() : role.Trim();
+    }
 
     /// <summary>Filters the crew by a specific role type and returns a formatted array of tags.</summary>
     /// <param name="item">The media item containing cast and crew.</param>
