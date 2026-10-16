@@ -16,6 +16,34 @@
   "icon_url": "https://raw.githubusercontent.com/natyusha/ShokoRelay/master/ShokoRelay/Assets/shoko-relay-icon.png",
   "releases": [
     {
+      "version": "0.21.0",
+      "tag": "v0.21.0",
+      "source_revision": "0ea8f1e4413692a92f8bc8839544f11907fb0f6c",
+      "released_at": "2026-10-16T11:01:44Z",
+      "channel": "Dev",
+      "release_notes": "A small but breaking change has been made in the abstractions which should help to enhance cast deduplication performance.\r\n\r\n**Changes:**\r\n- Enhance FindMatchingTmdbEntry to compare whitespace-stripped AniDB OriginalName values against whitespace-stripped TMDB OriginalName and TMDB AlternativeNames as high-priority fast paths\r\n- Remove the AniDB `AlternativeNames` check, as Shoko doesn't populate alternate names for AniDB creators\r\n- Implement a 5th pass in `FindMatchingTmdbEntry` to compare AniDB's romanised Name (and its flipped variant) against TMDB AlternativeNames (and their flipped variants) to ensure accurate fallback matching\r\n- Read a creator's and a character's name from `Title`, their original name from `OriginalTitle` and their other names from `Titles`, now that `Name`, `OriginalName` and `AlternativeNames` are gone\r\n- Implement case-insensitive, whitespace-ignoring deduplication for studio tags via `DistinctBy` in `GetStudioTags`\r\n- Bump Shoko.Abstractions to v6.0.0-alpha.108\r\n\r\n\r\n**Contributions:**\r\n* @revam in https://github.com/natyusha/ShokoRelay/pull/20\r\n\r\n**Full Changelog**: https://github.com/natyusha/ShokoRelay/compare/v0.20.2...v0.21.0\r",
+      "archives": [
+        {
+          "runtime": "linux-arm64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/natyusha/ShokoRelay/releases/download/v0.21.0/ShokoRelay-v0.21.0-dev_linux-arm64.zip",
+          "checksum": "sha256:76b17731d6401a37f355cdd7a1703404da52713e16d24ab0edbc5631c064431f"
+        },
+        {
+          "runtime": "linux-x64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/natyusha/ShokoRelay/releases/download/v0.21.0/ShokoRelay-v0.21.0-dev_linux-x64.zip",
+          "checksum": "sha256:736f43b3774b8f368ca3987477e021b7029d28febafb3d754083ccc6b90eca98"
+        },
+        {
+          "runtime": "win-x64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/natyusha/ShokoRelay/releases/download/v0.21.0/ShokoRelay-v0.21.0-dev_win-x64.zip",
+          "checksum": "sha256:43ac20aa1c891e27114eb4aa2610a7ffce3e4a3409d54450d4c1098dfc6d3008"
+        }
+      ]
+    },
+    {
       "version": "0.20.2",
       "tag": "v0.20.2",
       "source_revision": "70212574efc2e34135351eddadaed6b64ca36aca",
