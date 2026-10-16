@@ -49,7 +49,7 @@ public static class CastHelper
         foreach (var c in anidbCast)
         {
             string? tag = GetName(c.Creator, c.Name);
-            string? role = c.Character?.Name ?? c.Name;
+            string? role = c.Character?.Title ?? c.Name;
 
             // Filter out non-person entries (characters, vehicles, mecha, etc.) where the actor name matches the role name.
             if (string.Equals(tag, role, StringComparison.Ordinal))
@@ -82,7 +82,7 @@ public static class CastHelper
                 continue;
 
             string? tag = GetName(c.Creator, c.Name);
-            string? role = c.Character?.Name ?? c.Name;
+            string? role = c.Character?.Title ?? c.Name;
 
             if (string.Equals(tag, role, StringComparison.Ordinal))
                 continue;
@@ -202,7 +202,7 @@ public static class CastHelper
     /// <param name="creator">The creator metadata object.</param>
     /// <param name="fallback">The fallback name.</param>
     /// <returns>The resolved name string.</returns>
-    private static string? GetName(ICreator? creator, string? fallback) => creator?.Name ?? fallback;
+    private static string? GetName(ICreator? creator, string? fallback) => creator?.Title ?? fallback;
 
     /// <summary>Strips department category prefixes from TMDB crew role names.</summary>
     /// <param name="role">The raw crew role string.</param>
@@ -271,8 +271,8 @@ public static class CastHelper
     /// <returns>The matched TMDB cast entry or null.</returns>
     private static ICast? FindMatchingTmdbCast(ICast anidbCast, IReadOnlyList<ICast> tmdbCastList)
     {
-        string? originalName = anidbCast.Creator?.OriginalName;
-        string? name = anidbCast.Creator?.Name ?? anidbCast.Name;
+        string? originalName = anidbCast.Creator?.OriginalTitle?.Value;
+        string? name = anidbCast.Creator?.Title ?? anidbCast.Name;
         string? flippedName = null;
 
         if (!string.IsNullOrWhiteSpace(name))
@@ -283,26 +283,26 @@ public static class CastHelper
         }
 
         if (!string.IsNullOrWhiteSpace(originalName))
-            if (tmdbCastList.FirstOrDefault(t => string.Equals(t.Creator?.OriginalName, originalName, StringComparison.OrdinalIgnoreCase)) is { } match1)
+            if (tmdbCastList.FirstOrDefault(t => string.Equals(t.Creator?.OriginalTitle?.Value, originalName, StringComparison.OrdinalIgnoreCase)) is { } match1)
                 return match1;
 
         if (!string.IsNullOrWhiteSpace(name))
-            if (tmdbCastList.FirstOrDefault(t => string.Equals(t.Creator?.Name ?? t.Name, name, StringComparison.OrdinalIgnoreCase)) is { } match2)
+            if (tmdbCastList.FirstOrDefault(t => string.Equals(t.Creator?.Title ?? t.Name, name, StringComparison.OrdinalIgnoreCase)) is { } match2)
                 return match2;
 
         if (!string.IsNullOrWhiteSpace(flippedName))
-            if (tmdbCastList.FirstOrDefault(t => string.Equals(t.Creator?.Name ?? t.Name, flippedName, StringComparison.OrdinalIgnoreCase)) is { } match3)
+            if (tmdbCastList.FirstOrDefault(t => string.Equals(t.Creator?.Title ?? t.Name, flippedName, StringComparison.OrdinalIgnoreCase)) is { } match3)
                 return match3;
 
-        if (anidbCast.Creator?.AlternativeNames is { Count: > 0 } altNames)
+        if (anidbCast.Creator?.Titles is { Count: > 0 } altNames)
             foreach (var alt in altNames)
             {
                 if (string.IsNullOrWhiteSpace(alt.Value))
                     continue;
                 if (
                     tmdbCastList.FirstOrDefault(t =>
-                        string.Equals(t.Creator?.Name ?? t.Name, alt.Value, StringComparison.OrdinalIgnoreCase)
-                        || (t.Creator?.AlternativeNames != null && t.Creator.AlternativeNames.Any(a => string.Equals(a.Value, alt.Value, StringComparison.OrdinalIgnoreCase)))
+                        string.Equals(t.Creator?.Title ?? t.Name, alt.Value, StringComparison.OrdinalIgnoreCase)
+                        || (t.Creator?.Titles != null && t.Creator.Titles.Any(a => string.Equals(a.Value, alt.Value, StringComparison.OrdinalIgnoreCase)))
                     ) is
                     { } match4
                 )
@@ -322,8 +322,8 @@ public static class CastHelper
         if (sameRoleTmdb.Count == 0)
             return null;
 
-        string? originalName = anidbCrew.Creator?.OriginalName;
-        string? name = anidbCrew.Creator?.Name ?? anidbCrew.Name;
+        string? originalName = anidbCrew.Creator?.OriginalTitle?.Value;
+        string? name = anidbCrew.Creator?.Title ?? anidbCrew.Name;
         string? flippedName = null;
 
         if (!string.IsNullOrWhiteSpace(name))
@@ -334,26 +334,26 @@ public static class CastHelper
         }
 
         if (!string.IsNullOrWhiteSpace(originalName))
-            if (sameRoleTmdb.FirstOrDefault(t => string.Equals(t.Creator?.OriginalName, originalName, StringComparison.OrdinalIgnoreCase)) is { } match1)
+            if (sameRoleTmdb.FirstOrDefault(t => string.Equals(t.Creator?.OriginalTitle?.Value, originalName, StringComparison.OrdinalIgnoreCase)) is { } match1)
                 return match1;
 
         if (!string.IsNullOrWhiteSpace(name))
-            if (sameRoleTmdb.FirstOrDefault(t => string.Equals(t.Creator?.Name ?? t.Name, name, StringComparison.OrdinalIgnoreCase)) is { } match2)
+            if (sameRoleTmdb.FirstOrDefault(t => string.Equals(t.Creator?.Title ?? t.Name, name, StringComparison.OrdinalIgnoreCase)) is { } match2)
                 return match2;
 
         if (!string.IsNullOrWhiteSpace(flippedName))
-            if (sameRoleTmdb.FirstOrDefault(t => string.Equals(t.Creator?.Name ?? t.Name, flippedName, StringComparison.OrdinalIgnoreCase)) is { } match3)
+            if (sameRoleTmdb.FirstOrDefault(t => string.Equals(t.Creator?.Title ?? t.Name, flippedName, StringComparison.OrdinalIgnoreCase)) is { } match3)
                 return match3;
 
-        if (anidbCrew.Creator?.AlternativeNames is { Count: > 0 } altNames)
+        if (anidbCrew.Creator?.Titles is { Count: > 0 } altNames)
             foreach (var alt in altNames)
             {
                 if (string.IsNullOrWhiteSpace(alt.Value))
                     continue;
                 if (
                     sameRoleTmdb.FirstOrDefault(t =>
-                        string.Equals(t.Creator?.Name ?? t.Name, alt.Value, StringComparison.OrdinalIgnoreCase)
-                        || (t.Creator?.AlternativeNames != null && t.Creator.AlternativeNames.Any(a => string.Equals(a.Value, alt.Value, StringComparison.OrdinalIgnoreCase)))
+                        string.Equals(t.Creator?.Title ?? t.Name, alt.Value, StringComparison.OrdinalIgnoreCase)
+                        || (t.Creator?.Titles != null && t.Creator.Titles.Any(a => string.Equals(a.Value, alt.Value, StringComparison.OrdinalIgnoreCase)))
                     ) is
                     { } match4
                 )
