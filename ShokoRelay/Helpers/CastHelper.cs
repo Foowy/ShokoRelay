@@ -102,7 +102,7 @@ public static class CastHelper
             }
         }
 
-        ProcessRoles(item.Cast, c => c.Creator, c => c.Name, c => c.Character?.Name ?? c.Name);
+        ProcessRoles(item.Cast, c => c.Creator, c => c.Name, c => c.Character?.Title ?? c.Name);
 
         if (Settings.CrewListings)
             ProcessRoles(item.Crew, c => c.Creator, c => c.Name, c => c.RoleType == CrewRoleType.Music ? "Composer" : CleanCrewRole(c.Name), (a, b) => a.RoleType == b.RoleType);
@@ -150,7 +150,7 @@ public static class CastHelper
     /// <param name="creator">The creator metadata object.</param>
     /// <param name="fallback">The fallback name.</param>
     /// <returns>The resolved name string.</returns>
-    private static string? GetName(ICreator? creator, string? fallback) => creator?.Name ?? fallback;
+    private static string? GetName(ICreator? creator, string? fallback) => creator?.Title ?? fallback;
 
     /// <summary>Strips department category prefixes from TMDB crew role names.</summary>
     /// <param name="role">The raw crew role string.</param>
@@ -222,8 +222,8 @@ public static class CastHelper
     /// <returns>The matched TMDB entry or null.</returns>
     private static T? FindMatchingTmdbEntry<T>(ICreator? anidbCreator, string anidbName, IReadOnlyList<T> tmdbList, Func<T, ICreator?> getCreator, Func<T, string?> getName)
     {
-        string? originalNameNoSpace = anidbCreator?.OriginalName?.Replace(" ", "", StringComparison.Ordinal);
-        string name = anidbCreator?.Name ?? anidbName;
+        string? originalNameNoSpace = anidbCreator?.OriginalTitle?.Value?.Replace(" ", "", StringComparison.Ordinal);
+        string name = anidbCreator?.Title ?? anidbName;
         string? flippedName = null;
 
         if (!string.IsNullOrWhiteSpace(name))
@@ -236,14 +236,12 @@ public static class CastHelper
         // OriginalName matches OriginalName (whitespace stripped)
         if (!string.IsNullOrWhiteSpace(originalNameNoSpace))
         {
-            var match = tmdbList.FirstOrDefault(t => getCreator(t)?.OriginalName?.Replace(" ", "", StringComparison.Ordinal) == originalNameNoSpace);
+            var match = tmdbList.FirstOrDefault(t => getCreator(t)?.OriginalTitle?.Value?.Replace(" ", "", StringComparison.Ordinal) == originalNameNoSpace);
             if (match != null)
                 return match;
 
             // OriginalName matches TMDB AlternativeNames (whitespace stripped)
-            match = tmdbList.FirstOrDefault(t =>
-                getCreator(t)?.AlternativeNames?.Any(a => !string.IsNullOrWhiteSpace(a.Value) && a.Value.Replace(" ", "", StringComparison.Ordinal) == originalNameNoSpace) == true
-            );
+            match = tmdbList.FirstOrDefault(t => getCreator(t)?.Titles?.Any(a => !string.IsNullOrWhiteSpace(a.Value) && a.Value.Replace(" ", "", StringComparison.Ordinal) == originalNameNoSpace) == true);
             if (match != null)
                 return match;
         }
@@ -251,7 +249,7 @@ public static class CastHelper
         // Name matches Name (romanised)
         if (!string.IsNullOrWhiteSpace(name))
         {
-            var match = tmdbList.FirstOrDefault(t => string.Equals(getCreator(t)?.Name ?? getName(t), name, StringComparison.OrdinalIgnoreCase));
+            var match = tmdbList.FirstOrDefault(t => string.Equals(getCreator(t)?.Title ?? getName(t), name, StringComparison.OrdinalIgnoreCase));
             if (match != null)
                 return match;
         }
@@ -259,27 +257,24 @@ public static class CastHelper
         // Flipped Name matches Name (romanised)
         if (!string.IsNullOrWhiteSpace(flippedName))
         {
-            var match = tmdbList.FirstOrDefault(t => string.Equals(getCreator(t)?.Name ?? getName(t), flippedName, StringComparison.OrdinalIgnoreCase));
+            var match = tmdbList.FirstOrDefault(t => string.Equals(getCreator(t)?.Title ?? getName(t), flippedName, StringComparison.OrdinalIgnoreCase));
             if (match != null)
                 return match;
         }
 
         // AniDB AlternativeNames against TMDB Name and TMDB AlternativeNames
-        if (anidbCreator?.AlternativeNames is { Count: > 0 } altNames)
+        if (anidbCreator?.Titles is { Count: > 0 } altNames)
         {
             foreach (var t in tmdbList)
             {
                 var tCreator = getCreator(t);
-                string tName = tCreator?.Name ?? getName(t) ?? "";
+                string tName = tCreator?.Title ?? getName(t) ?? "";
 
                 foreach (var alt in altNames)
                 {
                     if (string.IsNullOrWhiteSpace(alt.Value))
                         continue;
-                    if (
-                        string.Equals(tName, alt.Value, StringComparison.OrdinalIgnoreCase)
-                        || (tCreator?.AlternativeNames?.Any(a => string.Equals(a.Value, alt.Value, StringComparison.OrdinalIgnoreCase)) == true)
-                    )
+                    if (string.Equals(tName, alt.Value, StringComparison.OrdinalIgnoreCase) || (tCreator?.Titles?.Any(a => string.Equals(a.Value, alt.Value, StringComparison.OrdinalIgnoreCase)) == true))
                         return t;
                 }
             }
