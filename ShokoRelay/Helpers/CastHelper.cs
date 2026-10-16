@@ -43,9 +43,11 @@ public static class CastHelper
 
         void ProcessRoles<T>(IEnumerable<T>? roles, Func<T, ICreator?> getCreator, Func<T, string?> getName, Func<T, string?> getRole, Func<T, T, bool>? tmdbFilter = null)
         {
-            var allRoles = roles?.ToList() ?? [];
-            var tmdbRoles = allRoles.Where(c => getCreator(c)?.ID.Source == MetadataSource.TMDB).ToList();
-            var anidbRoles = allRoles.Where(c => getCreator(c) == null || getCreator(c)!.ID.Source != MetadataSource.TMDB).ToList();
+            if (roles == null || !roles.Any())
+                return;
+
+            var tmdbRoles = roles.Where(c => getCreator(c)?.ID.Source == MetadataSource.TMDB).ToList();
+            var anidbRoles = roles.Where(c => getCreator(c) == null || getCreator(c)!.ID.Source != MetadataSource.TMDB);
             var matchedTmdb = new HashSet<T>();
 
             foreach (var c in anidbRoles)
@@ -57,7 +59,7 @@ public static class CastHelper
                 if (string.Equals(tag, role, StringComparison.Ordinal))
                     continue;
 
-                var candidates = tmdbFilter != null ? tmdbRoles.Where(t => tmdbFilter(c, t)).ToList() : tmdbRoles;
+                IEnumerable<T> candidates = tmdbFilter != null ? tmdbRoles.Where(t => tmdbFilter(c, t)) : tmdbRoles;
                 var match = FindMatchingTmdbEntry(getCreator(c), getName(c) ?? "", candidates, getCreator, getName);
                 var thumbImg = getCreator(c)?.PrimaryImage;
 
@@ -119,13 +121,13 @@ public static class CastHelper
     /// <param name="item">Source item.</param>
     /// <returns>An array of anonymous objects containing writer names.</returns>
     public static object[] GetWriters(IWithCastAndCrew item) =>
-        DeduplicateCrew(item.Crew?.Where(c => c.RoleType is CrewRoleType.SeriesComposer or CrewRoleType.SourceWork))
-            .Select(c => GetName(c.Creator, c.Name))
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Select(name => (object)new { tag = name })
-            .ToArray()
-        ?? [];
+        [
+            .. DeduplicateCrew(item.Crew?.Where(c => c.RoleType is CrewRoleType.SeriesComposer or CrewRoleType.SourceWork))
+                .Select(c => GetName(c.Creator, c.Name))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(name => (object)new { tag = name }),
+        ];
 
     /// <summary>Retrieve producer credits for the given item.</summary>
     /// <param name="item">Item with cast/crew data.</param>
@@ -140,7 +142,13 @@ public static class CastHelper
     /// <param name="series">The Shoko series metadata.</param>
     /// <returns>An array of <see cref="TagItem"/> instances, one per distinct studio.</returns>
     public static TagItem[] GetStudioTags(ISeries series) =>
-        series.Studios?.Where(s => !string.IsNullOrWhiteSpace(s.Name)).Select(s => s.Name).Distinct(StringComparer.OrdinalIgnoreCase).Select(name => new TagItem { Tag = name }).ToArray() ?? [];
+        series
+            .Studios?.Where(s => !string.IsNullOrWhiteSpace(s.Name))
+            .OrderBy(s => s.ID.Source == MetadataSource.TMDB ? 1 : 0)
+            .DistinctBy(s => s.Name.Contains(' ') ? s.Name.Replace(" ", "", StringComparison.Ordinal) : s.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(s => new TagItem { Tag = s.Name })
+            .ToArray()
+        ?? [];
 
     #endregion
 
@@ -168,13 +176,13 @@ public static class CastHelper
     /// <param name="roleType">The role type to filter for.</param>
     /// <returns>An array of anonymous objects containing crew tags.</returns>
     private static object[] FilterCrew(IWithCastAndCrew item, CrewRoleType roleType) =>
-        DeduplicateCrew(item.Crew?.Where(c => c.RoleType == roleType))
-            .Select(c => GetName(c.Creator, c.Name))
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Select(name => (object)new { tag = name })
-            .ToArray()
-        ?? [];
+        [
+            .. DeduplicateCrew(item.Crew?.Where(c => c.RoleType == roleType))
+                .Select(c => GetName(c.Creator, c.Name))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(name => (object)new { tag = name }),
+        ];
 
     /// <summary>Deduplicates a collection of crew members per role type, preferring AniDB entries over matching TMDB entries.</summary>
     /// <param name="crewItems">The raw collection of crew items.</param>
@@ -182,22 +190,20 @@ public static class CastHelper
     private static IEnumerable<ICrew> DeduplicateCrew(IEnumerable<ICrew>? crewItems)
     {
         if (crewItems == null)
-            return [];
+            yield break;
 
         var grouped = crewItems.GroupBy(c => c.RoleType);
-        var result = new List<ICrew>();
 
         foreach (var group in grouped)
         {
-            var allCrew = group.ToList();
-            var tmdbCrew = allCrew.Where(c => c.Creator?.ID.Source == MetadataSource.TMDB).ToList();
-            var anidbCrew = allCrew.Where(c => c.Creator == null || c.Creator.ID.Source != MetadataSource.TMDB).ToList();
+            var tmdbCrew = group.Where(c => c.Creator?.ID.Source == MetadataSource.TMDB).ToList();
+            var anidbCrew = group.Where(c => c.Creator == null || c.Creator.ID.Source != MetadataSource.TMDB);
 
             var matchedTmdbEntries = new HashSet<ICrew>();
 
             foreach (var c in anidbCrew)
             {
-                result.Add(c);
+                yield return c;
                 var match = FindMatchingTmdbEntry(c.Creator, c.Name ?? "", tmdbCrew, t => t.Creator, t => t.Name);
                 if (match != null)
                     matchedTmdbEntries.Add(match);
@@ -206,11 +212,9 @@ public static class CastHelper
             foreach (var c in tmdbCrew)
             {
                 if (!matchedTmdbEntries.Contains(c))
-                    result.Add(c);
+                    yield return c;
             }
         }
-
-        return result;
     }
 
     /// <summary>Finds a matching TMDB entry for an AniDB entry based on name variations.</summary>
@@ -220,9 +224,12 @@ public static class CastHelper
     /// <param name="getCreator">Function to extract the creator object from an entry.</param>
     /// <param name="getName">Function to extract the name from an entry.</param>
     /// <returns>The matched TMDB entry or null.</returns>
-    private static T? FindMatchingTmdbEntry<T>(ICreator? anidbCreator, string anidbName, IReadOnlyList<T> tmdbList, Func<T, ICreator?> getCreator, Func<T, string?> getName)
+    private static T? FindMatchingTmdbEntry<T>(ICreator? anidbCreator, string anidbName, IEnumerable<T> tmdbList, Func<T, ICreator?> getCreator, Func<T, string?> getName)
     {
-        string? originalNameNoSpace = anidbCreator?.OriginalTitle?.Value?.Replace(" ", "", StringComparison.Ordinal);
+        string? originalNameNoSpace = anidbCreator?.OriginalTitle?.Value;
+        if (originalNameNoSpace?.Contains(' ') == true)
+            originalNameNoSpace = originalNameNoSpace.Replace(" ", "", StringComparison.Ordinal);
+
         string name = anidbCreator?.Title ?? anidbName;
         string? flippedName = null;
 
@@ -236,31 +243,32 @@ public static class CastHelper
         // OriginalName matches OriginalName (whitespace stripped)
         if (!string.IsNullOrWhiteSpace(originalNameNoSpace))
         {
-            var match = tmdbList.FirstOrDefault(t => getCreator(t)?.OriginalTitle?.Value?.Replace(" ", "", StringComparison.Ordinal) == originalNameNoSpace);
-            if (match != null)
-                return match;
+            if (
+                tmdbList.FirstOrDefault(t =>
+                    (getCreator(t)?.OriginalTitle?.Value?.Contains(' ') == true ? getCreator(t)!.OriginalTitle!.Value.Replace(" ", "", StringComparison.Ordinal) : getCreator(t)?.OriginalTitle?.Value)
+                    == originalNameNoSpace
+                ) is
+                { } match1
+            )
+                return match1;
 
             // OriginalName matches TMDB AlternativeNames (whitespace stripped)
-            match = tmdbList.FirstOrDefault(t => getCreator(t)?.Titles?.Any(a => !string.IsNullOrWhiteSpace(a.Value) && a.Value.Replace(" ", "", StringComparison.Ordinal) == originalNameNoSpace) == true);
-            if (match != null)
-                return match;
+            if (
+                tmdbList.FirstOrDefault(t =>
+                    getCreator(t)?.Titles?.Any(a => !string.IsNullOrWhiteSpace(a.Value) && (a.Value.Contains(' ') ? a.Value.Replace(" ", "", StringComparison.Ordinal) : a.Value) == originalNameNoSpace) == true
+                ) is
+                { } match2
+            )
+                return match2;
         }
 
         // Name matches Name (romanised)
-        if (!string.IsNullOrWhiteSpace(name))
-        {
-            var match = tmdbList.FirstOrDefault(t => string.Equals(getCreator(t)?.Title ?? getName(t), name, StringComparison.OrdinalIgnoreCase));
-            if (match != null)
-                return match;
-        }
+        if (!string.IsNullOrWhiteSpace(name) && tmdbList.FirstOrDefault(t => string.Equals(getCreator(t)?.Title ?? getName(t), name, StringComparison.OrdinalIgnoreCase)) is { } match3)
+            return match3;
 
         // Flipped Name matches Name (romanised)
-        if (!string.IsNullOrWhiteSpace(flippedName))
-        {
-            var match = tmdbList.FirstOrDefault(t => string.Equals(getCreator(t)?.Title ?? getName(t), flippedName, StringComparison.OrdinalIgnoreCase));
-            if (match != null)
-                return match;
-        }
+        if (!string.IsNullOrWhiteSpace(flippedName) && tmdbList.FirstOrDefault(t => string.Equals(getCreator(t)?.Title ?? getName(t), flippedName, StringComparison.OrdinalIgnoreCase)) is { } match4)
+            return match4;
 
         // AniDB Name and Flipped Name against TMDB AlternativeNames (and their flipped variants)
         foreach (var t in tmdbList)
