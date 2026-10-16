@@ -262,21 +262,30 @@ public static class CastHelper
                 return match;
         }
 
-        // AniDB AlternativeNames against TMDB Name and TMDB AlternativeNames
-        if (anidbCreator?.Titles is { Count: > 0 } altNames)
+        // AniDB Name and Flipped Name against TMDB AlternativeNames (and their flipped variants)
+        foreach (var t in tmdbList)
         {
-            foreach (var t in tmdbList)
-            {
-                var tCreator = getCreator(t);
-                string tName = tCreator?.Title ?? getName(t) ?? "";
+            if (getCreator(t)?.Titles is not { Count: > 0 } altNames)
+                continue;
 
-                foreach (var alt in altNames)
-                {
-                    if (string.IsNullOrWhiteSpace(alt.Value))
-                        continue;
-                    if (string.Equals(tName, alt.Value, StringComparison.OrdinalIgnoreCase) || (tCreator?.Titles?.Any(a => string.Equals(a.Value, alt.Value, StringComparison.OrdinalIgnoreCase)) == true))
-                        return t;
-                }
+            foreach (var alt in altNames)
+            {
+                if (string.IsNullOrWhiteSpace(alt.Value))
+                    continue;
+
+                string altName = alt.Value;
+                if (string.Equals(name, altName, StringComparison.OrdinalIgnoreCase) || (!string.IsNullOrWhiteSpace(flippedName) && string.Equals(flippedName, altName, StringComparison.OrdinalIgnoreCase)))
+                    return t;
+
+                var parts = altName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (
+                    parts.Length == 2
+                    && (
+                        string.Equals(name, $"{parts[1]} {parts[0]}", StringComparison.OrdinalIgnoreCase)
+                        || (!string.IsNullOrWhiteSpace(flippedName) && string.Equals(flippedName, $"{parts[1]} {parts[0]}", StringComparison.OrdinalIgnoreCase))
+                    )
+                )
+                    return t;
             }
         }
 
