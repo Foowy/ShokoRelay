@@ -82,34 +82,32 @@ public class PlexCollections(HttpClient httpClient, PlexClient plexClient, ILogg
 
     #region Poster Operations
 
-    /// <summary>Uploads a custom collection image (poster, backdrop, logo, or square art) to Plex. The image is downloaded from the URL and sent as the request body, because Plex refuses to fetch caller-supplied URLs that point at private addresses.</summary>
+    /// <summary>Uploads a custom collection image (poster, backdrop, logo, or square art) to Plex.</summary>
+    /// <remarks>The image is streamed from the local disk and sent as the request body, avoiding loopback networking issues.</remarks>
     /// <param name="collectionId">Plex collection ID.</param>
-    /// <param name="imageUrl">The dynamic callback URL to fetch the image bytes.</param>
+    /// <param name="imagePath">The local filesystem path to the image.</param>
     /// <param name="subEndpoint">Plex metadata sub-endpoint (e.g. posters, arts, clearLogos, squareArts).</param>
     /// <param name="target">The target Plex library.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>True if the upload was successful; otherwise, false.</returns>
-    public async Task<bool> UploadCollectionImageByUrlAsync(int collectionId, string imageUrl, string subEndpoint, PlexLibraryTarget target, CancellationToken cancellationToken = default)
+    public async Task<bool> UploadCollectionImageAsync(int collectionId, string imagePath, string subEndpoint, PlexLibraryTarget target, CancellationToken cancellationToken = default)
     {
         string action = $"Upload {subEndpoint} for {collectionId}";
         try
         {
-            using var download = await httpClient.GetAsync(imageUrl, cancellationToken).ConfigureAwait(false);
-            if (!download.IsSuccessStatusCode)
+            if (!File.Exists(imagePath))
             {
-                logger.LogWarning("PlexCollections: {Action} failed to download {ImageUrl} with status {StatusCode}", action, imageUrl, download.StatusCode);
-                return false;
-            }
-            var bytes = await download.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
-            if (bytes.Length == 0)
-            {
-                logger.LogWarning("PlexCollections: {Action} downloaded an empty image from {ImageUrl}", action, imageUrl);
+                logger.LogWarning("PlexCollections: {Action} failed because the file does not exist at {ImagePath}", action, imagePath);
                 return false;
             }
 
+            using var fs = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             using var request = plexClient.CreateRequest(HttpMethod.Post, $"/library/metadata/{collectionId}/{subEndpoint}", target.ServerUrl);
-            request.Content = new ByteArrayContent(bytes);
-            request.Content.Headers.ContentType = download.Content.Headers.ContentType ?? new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+
+            var content = new StreamContent(fs);
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(ImageHelper.GetMimeType(Path.GetExtension(imagePath)) ?? "image/jpeg");
+            request.Content = content;
+
             using var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
                 return true;
